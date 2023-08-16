@@ -294,3 +294,25 @@ class ExperimentClient:
             print('completed run:')
             print(currun)
         return currun
+    
+    #===========================================================================
+    #                          Loading Data
+    #
+    # Loading actual datasets for modeling
+    #===========================================================================
+
+    def opml_load_task(self, task_str):
+        """
+        takes a task string, "{siute_id}-{task_id}" and loads the relevent dataset
+        """
+        #extracting suite id and task id to load
+        suite_id, task_id = task_str.split('-')
+        suite_id = int(suite_id)
+        task_id = int(task_id)
+
+        dataset = openml.tasks.get_task(task_id).get_dataset()
+
+        X, y, categorical_indicator, attribute_names = dataset.get_data(
+            dataset_format="dataframe", target=dataset.default_target_attribute)
+
+        return X, y, categorical_indicator
