@@ -9,7 +9,7 @@ class ExperimentClient:
     github.
     """
 
-    def __init__(self, verbose=False, opml_regression=True, opml_classification=True, opml_purnum = True, opml_numcat = True, runs_per_pair=60):
+    def __init__(self, verbose=False, opml_regression=True, opml_classification=True, opml_purnum = True, opml_numcat = True, runs_per_pair=60, suppress_warn=True):
         """Initialize
         verbose: helpful printouts or not
         opml_regression: tasks regression targets
@@ -26,6 +26,13 @@ class ExperimentClient:
 
         #no run started yet
         self.run_id = None
+
+        #for sticky loading
+        self.prev_task = ""
+        self.prev_X = None
+        self.prev_Y = None
+        self.prev_categorical_indicator = None
+        self.prev_attribute_names = None
 
         #no secerets defined yet
         self.orchname = None
@@ -55,13 +62,20 @@ class ExperimentClient:
         #how many times to run a hyperparameter-task pair
         self.runs_per_pair = runs_per_pair
 
+        #openml has a lot of warnings which are difficult to supress atomically
+        if suppress_warn:
+            import warnings
+            warnings.filterwarnings("ignore")
+            import logging
+            logging.getLogger().setLevel(logging.ERROR)
+
     def mount_drive(self):
         """ Mounts a drive, if on google colab, chiefly for getting credentials
         Works if working on google colab. *shouldn't* break anything if
         not called and not on colab
         """
         from google.colab import drive
-        drive.mount('/content/drive')
+        drive.mount('/content/drive', force_remount=False)
 
     #===========================================================================
     #                      Auth and Seceret Management
@@ -141,7 +155,7 @@ class ExperimentClient:
     #===========================================================================
     def def_model_groups(self, model_groups):
         """Define experiment Model Groups
-        a "model group" is a grouping of model and hyperparameter space. The 
+        a "model group" is a grouping of model and hyperparameter space. The
         "model_groups" dictionary should look like:
 
         {<model group id>: {model:<model id>, hype:<hyperparameters>}}
@@ -178,7 +192,7 @@ class ExperimentClient:
                 raise(Exception("model group '{}' has a non-string model (aka model id) attribute".format(k)))
             if type(v['hype']) is not dict:
                 raise(Exception("model group '{}' has a non-dictionary hype (aka hyperparameter space) attribute".format(k)))
-            
+
         self.model_groups=model_groups
 
     def def_data_groups_opml(self):
@@ -211,7 +225,7 @@ class ExperimentClient:
 
             if not isinstance(v, list):
                 raise(Exception("at data group '{}', '{}' should be a list of model ids, not a {}".format(k, v, type(v))))
-            
+
             for mid in v:
                 if type(mid) != str:
                     raise(Exception("model id '{}', in '{}', should be of type 'str', not {}".format(mid, k, type(mid))))
@@ -262,9 +276,27 @@ class ExperimentClient:
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/beginRun"
         payload = json.dumps({'experiment': self.expname})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
-        self.run_id = requests.request("POST", url, headers=headers, data=payload).text[1:-1] #trimming of quotes
+        self.run_id = requests.request("POST", url, headers=headers, data=payload).text
+        if self.run_id == 'experiment concluded':
+            raise(Exception("no run_id, experiment concluded!"))
+        self.run_id = self.run_id[1:-1] #trimming of quotes
         if self.verbose:
-            print('new run id: {}'.format(self.run_id))
+            print(self.run_id[1:-1])
+        return self.run_id
+
+    def begin_run_sticky(self):
+        """
+        prioritizes same dataset as previous run
+        """
+        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/beginRunSticky"
+        payload = json.dumps({'experiment': self.expname, 'task': self.prev_task})
+        headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
+        self.run_id = requests.request("POST", url, headers=headers, data=payload).text
+        if self.run_id == 'experiment concluded':
+            raise(Exception("no run_id, experiment concluded!"))
+        self.run_id = self.run_id[1:-1] #trimming of quotes
+        if self.verbose:
+            print(self.run_id[1:-1])
         return self.run_id
 
     def get_run(self):
@@ -294,7 +326,7 @@ class ExperimentClient:
             print('completed run:')
             print(currun)
         return currun
-    
+
     #===========================================================================
     #                          Loading Data
     #
@@ -305,14 +337,31 @@ class ExperimentClient:
         """
         takes a task string, "{siute_id}-{task_id}" and loads the relevent dataset
         """
+        if self.verbose: print('downloading task {}'.format(task_str))
+
         #extracting suite id and task id to load
         suite_id, task_id = task_str.split('-')
         suite_id = int(suite_id)
         task_id = int(task_id)
 
-        dataset = openml.tasks.get_task(task_id).get_dataset()
+        if task_str != self.prev_task:
 
-        X, y, categorical_indicator, attribute_names = dataset.get_data(
-            dataset_format="dataframe", target=dataset.default_target_attribute)
+            if self.verbose: print('task different than previous task, downloading...')
 
-        return X, y, categorical_indicator
+            dataset = openml.tasks.get_task(task_id).get_dataset()
+
+            X, y, categorical_indicator, attribute_names = dataset.get_data(
+                dataset_format="dataframe", target=dataset.default_target_attribute)
+
+            #saving to object, for sticky loading
+            self.prev_task = task_str
+            self.prev_X = X
+            self.prev_Y = y
+            self.prev_categorical_indicator = categorical_indicator
+            self.prev_attribute_names = attribute_names
+
+            return X, y, categorical_indicator, attribute_names
+
+        else:
+            if self.verbose: print('using values from previous task load, skipped download')
+            return self.prev_X, self.prev_Y, self.prev_categorical_indicator, self.prev_attribute_names

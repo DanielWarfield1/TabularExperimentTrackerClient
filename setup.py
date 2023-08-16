@@ -12,7 +12,7 @@ def parse_requirements(filename):
 from setuptools import setup, find_packages
 
 setup(name='TabularExperimentTrackerClient',
-      version='0.0.0',
+      version='0.0.1',
       description='a client to be used to run certain experiments',
       url='https://github.com/DanielWarfield1/TabularExperimentTrackerClient',
       author='Daniel Warfield',
@@ -20,4 +20,4 @@ setup(name='TabularExperimentTrackerClient',
       license='MIT',
       packages=find_packages(),
       zip_safe=False,
-      install_requires=["openml"])
+      install_requires=["openml", "requests", "json"])
