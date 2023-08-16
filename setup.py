@@ -20,4 +20,4 @@ setup(name='TabularExperimentTrackerClient',
       license='MIT',
       packages=find_packages(),
       zip_safe=False,
-      install_requires=["openml", "requests", "json"])
+      install_requires=["openml", "requests"])
