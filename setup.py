@@ -6,7 +6,7 @@ def parse_requirements(filename):
     lineiter = (line.strip() for line in open(filename))
     return [line for line in lineiter if line and not line.startswith("#")]
 
-reqs = parse_requirements('requirements.txt')
+# reqs = parse_requirements('requirements.txt')
 
 #____info____
 from setuptools import setup, find_packages
@@ -20,4 +20,4 @@ setup(name='TabularExperimentTrackerClient',
       license='MIT',
       packages=find_packages(),
       zip_safe=False,
-      install_requires=reqs)
+      install_requires=["openml"])
