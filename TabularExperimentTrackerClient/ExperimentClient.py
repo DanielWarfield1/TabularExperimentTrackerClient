@@ -365,3 +365,20 @@ class ExperimentClient:
         else:
             if self.verbose: print('using values from previous task load, skipped download')
             return self.prev_X, self.prev_Y, self.prev_categorical_indicator, self.prev_attribute_names
+        
+    #===========================================================================
+    #                              Tools
+    #
+    # Things not necessary in the user flow, but are useful none the less. Things
+    # like testing a hyperparameter space
+    #===========================================================================
+    
+    def monte_carlo_sample_space(self, hype, n=999):
+        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/monteCarloSampleSpace"
+        payload = json.dumps({"hype": hype, "n":n})
+        headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
+        resp = requests.request("POST", url, headers=headers, data=payload).text
+        if self.verbose:
+            print('sampled {} points in the space:'.format(n))
+            print(hype)
+        return resp
