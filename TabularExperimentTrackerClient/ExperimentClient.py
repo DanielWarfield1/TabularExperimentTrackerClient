@@ -454,7 +454,7 @@ class ExperimentClient:
 
                 for i, met in enumerate(srun['metrics_per_epoch']):
                     d = {**d, **{'RES_{}_{}'.format(k,i): v for k, v in met.items()}}
-                    d['INFO_mode'] = model
+                    d['INFO_model'] = model
                     d['INFO_task'] = task
                     df.append(d)
 
