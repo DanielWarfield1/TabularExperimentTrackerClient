@@ -1,6 +1,8 @@
 import openml
 import requests
 import json
+import time
+import pandas as pd
 
 class ExperimentClient:
     """For managing communication with orchestrator and loading data
@@ -388,6 +390,37 @@ class ExperimentClient:
             return self.prev_X, self.prev_Y, self.prev_categorical_indicator, self.prev_attribute_names
         
     #===========================================================================
+    #                              Results
+    #
+    # Querying Results
+    #===========================================================================
+    
+    def get_results(self, expname=None):
+        
+        #uses expname from last loaded if not specified
+        if expname is None:
+            expname = self.expname
+            
+        if self.verbose:
+            print('getting results for {}....'.format(expname))
+            
+        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/getResults"
+        payload = json.dumps({"experiment": expname})
+        headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
+        t1 = time.time()
+        resp_unparse = requests.request("POST", url, headers=headers, data=payload)
+        t2=time.time()
+        resp = json.loads(resp_unparse.text)
+        t3=time.time()    
+        
+        if self.verbose:
+            print('request time: {}'.format(t2-t1))
+            print('parse time: {}'.format(t3-t2))
+            
+        return resp
+        
+    
+    #===========================================================================
     #                              Tools
     #
     # Things not necessary in the user flow, but are useful none the less. Things
@@ -395,6 +428,8 @@ class ExperimentClient:
     #===========================================================================
     
     def monte_carlo_sample_space(self, hype, n=999):
+        """randomly search the selected hyperparameter space, for validation
+        """
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/monteCarloSampleSpace"
         payload = json.dumps({"hype": hype, "n":n})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
@@ -403,3 +438,25 @@ class ExperimentClient:
             print('sampled {} points in the space:'.format(n))
             print(hype)
         return json.loads(resp)
+    
+    def parse_runs(self, results):
+        """parse successful runs from get_results into a dataframe including all results,
+        model info, and hyperparameters
+        """
+        
+        df = []
+        for mtp in results['mtpairs']:
+            model = mtp['model']
+            task = mtp['task']
+            for srun in mtp['successful_runs']:
+                hype = srun['hyp']
+                d = {'HYPE_'+k: v for k, v in hype.items()}
+
+                for i, met in enumerate(srun['metrics_per_epoch']):
+                    d = {**d, **{'RES_{}_{}'.format(k,i): v for k, v in met.items()}}
+                    d['INFO_mode'] = model
+                    d['INFO_task'] = task
+                    df.append(d)
+
+        df = pd.DataFrame(df)
+        return df
