@@ -381,4 +381,4 @@ class ExperimentClient:
         if self.verbose:
             print('sampled {} points in the space:'.format(n))
             print(hype)
-        return resp
+        return json.loads(resp)
