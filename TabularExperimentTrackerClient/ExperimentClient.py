@@ -28,7 +28,8 @@ class ExperimentClient:
         self.run_id = None
 
         #for sticky loading
-        self.prev_task = ""
+        self.stuck_task = "" #for sticking to a task w/ the orchestrator
+        self.prev_task = ""  #for managing actual task loading
         self.prev_X = None
         self.prev_Y = None
         self.prev_categorical_indicator = None
@@ -288,24 +289,38 @@ class ExperimentClient:
         if self.run_id == 'experiment concluded':
             raise(Exception("no run_id, experiment concluded!"))
         self.run_id = self.run_id[1:-1] #trimming of quotes
+        
+        #getting run info
+        currun = self.get_run()
+        
+        #updating sticky
+        self.stuck_task = currun['mtpair_task']
+        
         if self.verbose:
             print(self.run_id[1:-1])
-        return self.run_id
+        return currun
 
     def begin_run_sticky(self):
         """
         prioritizes same dataset as previous run
         """
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/beginRunSticky"
-        payload = json.dumps({'experiment': self.expname, 'task': self.prev_task})
+        payload = json.dumps({'experiment': self.expname, 'task': self.stuck_task})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
         self.run_id = requests.request("POST", url, headers=headers, data=payload).text
         if self.run_id == 'experiment concluded':
             raise(Exception("no run_id, experiment concluded!"))
         self.run_id = self.run_id[1:-1] #trimming of quotes
+        
+        #getting run info
+        currun = self.get_run()
+        
+        #updating sticky
+        self.stuck_task = currun['mtpair_task']
+        
         if self.verbose:
             print(self.run_id[1:-1])
-        return self.run_id
+        return currun
 
     def get_run(self):
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/getRun"
