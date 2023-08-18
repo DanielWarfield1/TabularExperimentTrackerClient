@@ -341,7 +341,7 @@ class ExperimentClient:
         return resp
 
     def end_run(self):
-        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/getRun"
+        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/endRun"
         payload = json.dumps({"run": self.run_id})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
         currun = json.loads(requests.request("POST", url, headers=headers, data=payload).text)
