@@ -344,11 +344,9 @@ class ExperimentClient:
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/endRun"
         payload = json.dumps({"run": self.run_id})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
-        currun = json.loads(requests.request("POST", url, headers=headers, data=payload).text)
+        resp = requests.request("POST", url, headers=headers, data=payload).text
         if self.verbose:
-            print('completed run:')
-            print(currun)
-        return currun
+            print(resp)
 
     #===========================================================================
     #                          Loading Data
