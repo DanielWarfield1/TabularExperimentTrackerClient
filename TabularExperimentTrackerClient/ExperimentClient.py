@@ -272,6 +272,14 @@ class ExperimentClient:
     # Communication which begins a run, gets run info, updates a run,
     # marks a run as complete
     #===========================================================================
+    
+    def experiment_info(self):
+        url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/getExperiment"
+        payload = json.dumps({"experiment": self.expname})
+        headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
+        resp = json.loads(requests.request("POST", url, headers=headers, data=payload).text)
+        return resp
+    
     def begin_run(self):
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/beginRun"
         payload = json.dumps({'experiment': self.expname})
