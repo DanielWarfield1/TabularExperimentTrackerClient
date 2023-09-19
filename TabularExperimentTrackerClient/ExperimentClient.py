@@ -3,6 +3,7 @@ import requests
 import json
 import time
 import pandas as pd
+from copy import deepcopy
 
 class ExperimentClient:
     """For managing communication with orchestrator and loading data
@@ -334,6 +335,7 @@ class ExperimentClient:
         return currun
 
     def update_run(self, metrics):
+        
         url = "https://us-west-2.aws.data.mongodb-api.com/app/experimentmanager-sjmvq/endpoint/updateRun"
         payload = json.dumps({"run": self.run_id,"metrics": metrics})
         headers = {'Name': self.orchname,'Seceret': self.orchseceret,'Content-Type': 'application/json'}
@@ -378,16 +380,16 @@ class ExperimentClient:
 
             #saving to object, for sticky loading
             self.prev_task = task_str
-            self.prev_X = X
-            self.prev_Y = y
-            self.prev_categorical_indicator = categorical_indicator
-            self.prev_attribute_names = attribute_names
+            self.prev_X = deepcopy(X)
+            self.prev_Y = deepcopy(y)
+            self.prev_categorical_indicator = deepcopy(categorical_indicator)
+            self.prev_attribute_names = deepcopy(attribute_names)
 
             return X, y, categorical_indicator, attribute_names
 
         else:
             if self.verbose: print('using values from previous task load, skipped download')
-            return self.prev_X, self.prev_Y, self.prev_categorical_indicator, self.prev_attribute_names
+            return deepcopy(self.prev_X), deepcopy(self.prev_Y), deepcopy(self.prev_categorical_indicator), deepcopy(self.prev_attribute_names)
         
     #===========================================================================
     #                              Results
